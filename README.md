@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://github.com/pangxueyuan2-creator/rule-relay/actions"><img src="https://github.com/pangxueyuan2-creator/rule-relay/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-50e3c2.svg" alt="MIT license" /></a>
-  <a href="https://www.npmjs.com/package/rule-relay"><img src="https://img.shields.io/npm/v/rule-relay.svg" alt="npm version" /></a>
+  <a href="https://github.com/pangxueyuan2-creator/rule-relay/releases"><img src="https://img.shields.io/github/v/release/pangxueyuan2-creator/rule-relay" alt="GitHub release" /></a>
 </p>
 
 ## The problem
@@ -43,19 +43,25 @@ $ rule-relay check .
 
 ## Quick start
 
-RuleRelay requires **Node.js 20 or newer**. Until a package-registry release is added, the source distribution is the supported install path:
+RuleRelay requires **Node.js 20 or newer**. It is not yet published to the npm registry. For a one-off run, execute the pinned GitHub Release package without adding it to your project:
 
 ```bash
-git clone https://github.com/pangxueyuan2-creator/rule-relay.git
-cd rule-relay
-pnpm install --frozen-lockfile --ignore-scripts
-pnpm build
-pnpm exec rule-relay scan .
-pnpm exec rule-relay explain src/server.ts
-pnpm exec rule-relay check .
+npm exec --yes \
+  --package=https://github.com/pangxueyuan2-creator/rule-relay/releases/download/v0.1.1/rule-relay-0.1.1.tgz \
+  -- rule-relay scan .
+
+npm exec --yes \
+  --package=https://github.com/pangxueyuan2-creator/rule-relay/releases/download/v0.1.1/rule-relay-0.1.1.tgz \
+  -- rule-relay explain src/server.ts
+
+npm exec --yes \
+  --package=https://github.com/pangxueyuan2-creator/rule-relay/releases/download/v0.1.1/rule-relay-0.1.1.tgz \
+  -- rule-relay check .
 ```
 
-`check` exits non-zero for validation errors, making it suitable for continuous integration. Add `--strict` to also fail on warnings such as exact duplicate instruction files. A GitHub release includes an npm-compatible tarball for users who prefer a pinned artifact.
+To build from source instead, clone the repository, run `pnpm install --frozen-lockfile --ignore-scripts`, then `pnpm build` and `pnpm exec rule-relay check .`.
+
+`check` exits non-zero for validation errors, making it suitable for continuous integration. Add `--strict` to also fail on warnings such as exact duplicate instruction files.
 
 ## What it checks today
 
@@ -91,11 +97,13 @@ jobs:
   rule-relay:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx rule-relay check . --strict
+      - name: Install pinned RuleRelay release
+        run: npm install --ignore-scripts --no-save https://github.com/pangxueyuan2-creator/rule-relay/releases/download/v0.1.1/rule-relay-0.1.1.tgz
+      - run: npx --no-install rule-relay check . --strict
 ```
 
 ## How it works
