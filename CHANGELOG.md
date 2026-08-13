@@ -6,6 +6,7 @@ All notable changes are documented here.
 
 - Fix the CI-only failure caused by an intentionally empty test fixture not being represented in Git.
 - Preserve the clean fixture with `.gitkeep` so local, archive, and GitHub Actions test runs exercise the same repository shape.
+- Pin the GitHub Actions package manager to a Node 20-compatible pnpm release while retaining the Node 20 and Node 22 verification matrix.
 
 ## 0.1.0 — 2026-08-13
 
