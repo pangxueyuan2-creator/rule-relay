@@ -1,0 +1,55 @@
+{
+  "name": "rule-relay",
+  "version": "0.1.0",
+  "description": "Explain, validate, and keep AI coding-agent instructions coherent across a repository.",
+  "type": "module",
+  "bin": {
+    "rule-relay": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "demo": "tsx src/cli.ts scan test/fixtures/complex",
+    "verify": "pnpm check && pnpm lint && pnpm test && pnpm build"
+  },
+  "keywords": [
+    "ai-agents",
+    "agents-md",
+    "claude-code",
+    "github-copilot",
+    "cursor",
+    "gemini",
+    "cli",
+    "developer-tools",
+    "repository-maintenance"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pangxueyuan2-creator/rule-relay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pangxueyuan2-creator/rule-relay/issues"
+  },
+  "homepage": "https://github.com/pangxueyuan2-creator/rule-relay#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.30.0",
+    "@types/node": "^22.15.30",
+    "eslint": "^9.30.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.1",
+    "tsx": "^4.20.3",
+    "vitest": "^3.2.4"
+  }
+}
