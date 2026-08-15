@@ -1,10 +1,8 @@
 # RuleRelay
 
-**See which AI coding-agent instructions apply, and catch stale or duplicated ones.**
+Small local tool that shows which AI coding-agent instruction files apply in a repo, and catches obvious problems like exact duplicates, broken local links, and missing package scripts.
 
-Repositories often end up with `AGENTS.md`, Copilot instructions, Claude rules, Cursor rules, and more. RuleRelay is a small local CLI that discovers those files, shows which ones apply to a path, and checks for exact duplicates, broken local links, and missing package scripts.
-
-It never calls a model and never executes commands found in the docs.
+It looks at files like AGENTS.md, Copilot instructions, Claude rules, Cursor rules, etc. It never calls a model and never executes anything found in the docs.
 
 ## Quick start
 
@@ -24,7 +22,7 @@ npm exec --yes \
   -- rule-relay check .
 ```
 
-Or build from source:
+Or from source:
 
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
@@ -35,10 +33,10 @@ pnpm exec rule-relay check .
 ## Commands
 
 ```text
-rule-relay scan      Discover instruction files
-rule-relay explain   Show rules relevant to a path
-rule-relay check     Validate (duplicates, links, scripts) — good for CI
-rule-relay init      Create a minimal AGENTS.md if missing
+rule-relay scan      discover instruction files
+rule-relay explain   show rules that apply to a path
+rule-relay check     validate (duplicates, links, scripts) — useful in CI
+rule-relay init      create a minimal AGENTS.md if missing
 ```
 
 `check` exits non-zero on errors. Add `--strict` to also fail on warnings.
@@ -47,4 +45,4 @@ rule-relay init      Create a minimal AGENTS.md if missing
 
 Early public version. Single maintainer.
 
-MIT License.
+MIT.
