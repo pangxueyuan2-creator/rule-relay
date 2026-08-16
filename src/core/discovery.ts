@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, readlink } from "node:fs/promises";
 import path from "node:path";
 
 import { adapterFor } from "../adapters/index.js";
@@ -24,12 +24,30 @@ const visit = async (root: string, current: string, files: InstructionFile[], fi
         }
         continue;
       }
+      const absolutePath = path.join(current, entry.name);
+      const relativePath = path.relative(root, absolutePath).split(path.sep).join("/");
+      if (entry.isSymbolicLink()) {
+        if (adapterFor(relativePath)) {
+          let detail = "Symlinked instruction content is not verified by this scan.";
+          try {
+            detail = "Targets: " + (await readlink(absolutePath));
+          } catch {
+            // readlink failure is secondary to the symlink finding itself.
+          }
+          findings.push({
+            code: "SYMLINKED_INSTRUCTION_FILE",
+            severity: "warning",
+            message: "Instruction file is a symlink and is not scanned: " + relativePath,
+            file: relativePath,
+            detail
+          });
+        }
+        continue;
+      }
       if (!entry.isFile()) {
         continue;
       }
 
-      const absolutePath = path.join(current, entry.name);
-      const relativePath = path.relative(root, absolutePath).split(path.sep).join("/");
       const adapter = adapterFor(relativePath);
       if (!adapter) {
         continue;

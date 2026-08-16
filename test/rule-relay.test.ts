@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -58,5 +58,36 @@ describe("RuleRelay", () => {
   it("allocates an isolated temporary path for CLI init tests", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "rule-relay-"));
     expect(directory).toContain("rule-relay-");
+  });
+
+  it("surfaces symlinked instruction files instead of silently skipping them", async (ctx) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "rule-relay-links-"));
+    try {
+      await writeFile(path.join(directory, "AGENTS.md"), "canonical rules\n", "utf8");
+      const nested = path.join(directory, "packages", "api");
+      await mkdir(nested, { recursive: true });
+      const link = path.join(nested, "AGENTS.md");
+      try {
+        // Junctions work without privileges on Windows; real symlinks cover POSIX CI.
+        if (process.platform === "win32") {
+          await symlink("../../AGENTS.md", link, "junction");
+        } else {
+          await symlink("../../AGENTS.md", link);
+        }
+      } catch {
+        ctx.skip();
+        return;
+      }
+      const report = await scanRepository(directory);
+      expect(report.files.map((file) => file.relativePath)).toEqual(["AGENTS.md"]);
+      const finding = report.findings.find((item) => item.code === "SYMLINKED_INSTRUCTION_FILE");
+      expect(finding).toBeDefined();
+      expect(finding?.file).toBe("packages/api/AGENTS.md");
+      expect(finding?.severity).toBe("warning");
+      // Node resolves Windows junctions to their absolute target on readlink.
+      expect(finding?.detail).toContain("AGENTS.md");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });
