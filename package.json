@@ -45,7 +45,7 @@
   "homepage": "https://github.com/pangxueyuan2-creator/rule-relay#readme",
   "devDependencies": {
     "@eslint/js": "^9.30.0",
-    "@types/node": "^22.15.30",
+    "@types/node": "^26.4.1",
     "eslint": "^9.30.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.1",
