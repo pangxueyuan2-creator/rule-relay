@@ -21,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "demo": "tsx src/cli.ts scan test/fixtures/complex",
-    "verify": "pnpm check && pnpm lint && pnpm test && pnpm build"
+    "verify": "pnpm check && pnpm lint && pnpm test && pnpm build",
+    "prepack": "pnpm build"
   },
   "keywords": [
     "ai-agents",
