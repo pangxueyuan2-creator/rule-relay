@@ -25,6 +25,7 @@ export interface Finding {
     | "DEAD_LOCAL_LINK"
     | "MISSING_PACKAGE_SCRIPT"
     | "UNREADABLE_FILE"
+    | "SYMLINKED_DIRECTORY"
     | "SYMLINKED_INSTRUCTION_FILE"
     | "UNKNOWN_INSTRUCTION_FORMAT";
   readonly severity: Severity;
