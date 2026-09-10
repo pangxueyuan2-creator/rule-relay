@@ -90,4 +90,37 @@ describe("RuleRelay", () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it("reports symlinked directories instead of silently hiding nested instructions", async (ctx) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "rule-relay-dir-links-"));
+    try {
+      const target = path.join(directory, "shared-rules");
+      await mkdir(target, { recursive: true });
+      await writeFile(path.join(target, "AGENTS.md"), "shared rules\n", "utf8");
+
+      const link = path.join(directory, "packages");
+      try {
+        if (process.platform === "win32") {
+          await symlink(target, link, "junction");
+        } else {
+          await symlink("shared-rules", link, "dir");
+        }
+      } catch {
+        ctx.skip();
+        return;
+      }
+
+      const report = await scanRepository(directory);
+      expect(report.files.map((file) => file.relativePath)).toEqual(["shared-rules/AGENTS.md"]);
+      expect(report.findings).toContainEqual(
+        expect.objectContaining({
+          code: "SYMLINKED_DIRECTORY",
+          severity: "warning",
+          file: "packages"
+        })
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });
