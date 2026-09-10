@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, readlink } from "node:fs/promises";
+import { readdir, readFile, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { adapterFor } from "../adapters/index.js";
@@ -27,13 +27,29 @@ const visit = async (root: string, current: string, files: InstructionFile[], fi
       const absolutePath = path.join(current, entry.name);
       const relativePath = path.relative(root, absolutePath).split(path.sep).join("/");
       if (entry.isSymbolicLink()) {
-        if (adapterFor(relativePath)) {
-          let detail = "Symlinked instruction content is not verified by this scan.";
-          try {
-            detail = "Targets: " + (await readlink(absolutePath));
-          } catch {
-            // readlink failure is secondary to the symlink finding itself.
-          }
+        let detail = "Symlink target could not be inspected.";
+        try {
+          detail = "Targets: " + (await readlink(absolutePath));
+        } catch {
+          // readlink failure is secondary to the symlink finding itself.
+        }
+
+        let targetsDirectory = false;
+        try {
+          targetsDirectory = (await stat(absolutePath)).isDirectory();
+        } catch {
+          // Broken or inaccessible symlinks are still reported when they look like instruction files.
+        }
+
+        if (targetsDirectory) {
+          findings.push({
+            code: "SYMLINKED_DIRECTORY",
+            severity: "warning",
+            message: "Symlinked directory is not scanned: " + relativePath,
+            file: relativePath,
+            detail
+          });
+        } else if (adapterFor(relativePath)) {
           findings.push({
             code: "SYMLINKED_INSTRUCTION_FILE",
             severity: "warning",
