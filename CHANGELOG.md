@@ -7,6 +7,8 @@ All notable changes are documented here.
 - Evaluate path-specific GitHub Copilot instruction `applyTo` globs when explaining which rules apply to a target path.
 - Discover `.instructions.md` files in nested `.github/instructions` subdirectories.
 - Fail `check` on missing, repeated, empty, absolute, or repository-escaping `applyTo` metadata instead of treating invalid path-specific instructions as globally applicable.
+- Discover nested `.github/copilot-instructions.md` files and scope each one to the directory that owns its `.github` folder.
+- Keep human-readable `explain` output focused on applicability instead of implying a cross-agent precedence rule.
 
 ## 0.1.1 — 2026-08-13
 

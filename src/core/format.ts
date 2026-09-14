@@ -37,8 +37,8 @@ export const formatExplain = (target: string, entries: readonly Applicability[])
   return [
     `RuleRelay — rules visible to ${target}`,
     "",
-    ...entries.map((entry, index) => `  ${index + 1}. ${entry.instruction} [${entry.agent}]${index === 0 ? " — most specific discovered rule" : ""}`),
+    ...entries.map((entry, index) => `  ${index + 1}. ${entry.instruction} [${entry.agent}]`),
     "",
-    "Note: Copilot path-specific .instructions.md files are reported as potentially applicable until their frontmatter glob is evaluated."
+    "Note: entries show applicability, not a cross-agent precedence claim. Copilot path-specific .instructions.md files appear only when their applyTo glob matches this target."
   ].join("\n");
 };

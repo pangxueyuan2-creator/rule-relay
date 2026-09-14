@@ -10,6 +10,22 @@ const directoryScope = (instructionPath: string): string => {
   return path.posix.dirname(normalized) === "." ? "." : path.posix.dirname(normalized);
 };
 
+const copilotRepositoryInstruction = /(^|\/)\.github\/copilot-instructions\.md$/i;
+
+export const isCopilotRepositoryInstruction = (relativePath: string): boolean =>
+  copilotRepositoryInstruction.test(normalize(relativePath));
+
+export const instructionScopeFor = (relativePath: string): string => {
+  const normalized = normalize(relativePath);
+  if (!isCopilotRepositoryInstruction(normalized)) {
+    return directoryScope(normalized);
+  }
+
+  const suffix = ".github/copilot-instructions.md";
+  const owner = normalized.slice(0, normalized.length - suffix.length).replace(/\/$/, "");
+  return owner || ".";
+};
+
 const isInside = (targetPath: string, directory: string): boolean =>
   directory === "." || targetPath === directory || targetPath.startsWith(`${directory}/`);
 
@@ -36,14 +52,15 @@ const copilot: AgentAdapter = {
   label: "GitHub Copilot",
   matches: (relativePath) => {
     const normalized = normalize(relativePath);
-    return normalized === ".github/copilot-instructions.md" || isCopilotPathInstruction(normalized);
+    return isCopilotRepositoryInstruction(normalized) || isCopilotPathInstruction(normalized);
   },
   appliesToTarget: (instruction, targetPath) => {
-    const normalized = normalize(instruction.relativePath);
-    if (normalized === ".github/copilot-instructions.md") {
-      return true;
+    const normalizedInstruction = normalize(instruction.relativePath);
+    const normalizedTarget = normalize(targetPath);
+    if (isCopilotRepositoryInstruction(normalizedInstruction)) {
+      return isInside(normalizedTarget, instructionScopeFor(normalizedInstruction));
     }
-    return isCopilotPathInstruction(normalized) && copilotApplyToMatches(instruction.content, normalize(targetPath));
+    return isCopilotPathInstruction(normalizedInstruction) && copilotApplyToMatches(instruction.content, normalizedTarget);
   }
 };
 

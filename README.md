@@ -43,6 +43,8 @@ rule-relay init      create a minimal AGENTS.md if missing
 
 For GitHub Copilot path-specific `.instructions.md` files, `explain` evaluates the frontmatter `applyTo` value against the requested repository-relative path. Comma-separated patterns and the documented `*`, `**`, and `?` wildcards are supported. Missing or malformed `applyTo` metadata is an error in `check` instead of being treated as globally applicable.
 
+RuleRelay also recognizes `.github/copilot-instructions.md` in nested repository locations. A nested file is scoped to the directory that owns its `.github` folder, while the root `.github/copilot-instructions.md` remains repository-wide. `explain` reports applicable files without claiming a cross-agent precedence order.
+
 ## Status
 
 Early public version. Single maintainer.

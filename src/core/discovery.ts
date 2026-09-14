@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { adapterFor } from "../adapters/index.js";
+import { adapterFor, instructionScopeFor } from "../adapters/index.js";
 import type { Finding, InstructionFile } from "../types.js";
 
 const ignoredDirectories = new Set([".git", "node_modules", "dist", "coverage", ".next", ".turbo"]);
@@ -76,7 +76,7 @@ const visit = async (root: string, current: string, files: InstructionFile[], fi
           relativePath,
           adapter: adapter.id,
           label: adapter.label,
-          scope: path.posix.dirname(relativePath) === "." ? "." : path.posix.dirname(relativePath),
+          scope: instructionScopeFor(relativePath),
           content,
           contentHash: digest(content)
         });
