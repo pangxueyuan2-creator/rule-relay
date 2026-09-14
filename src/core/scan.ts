@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import { adapters } from "../adapters/index.js";
+import { copilotScopeDepth, isCopilotPathInstruction } from "../adapters/copilot.js";
 import type { Applicability, InstructionFile, ScanReport } from "../types.js";
 import { discoverInstructions } from "./discovery.js";
 import { validateInstructions } from "./validation.js";
@@ -28,23 +29,14 @@ export const scanRepository = async (root: string): Promise<ScanReport> => {
   };
 };
 
-const pathSpecificScopeDepth = (file: InstructionFile): number => {
-  if (file.adapter !== "copilot" || !file.relativePath.includes("/.github/instructions/")) {
-    return 0;
-  }
-  const applyTo = /^---\s*[\s\S]*?^applyTo:\s*["']?([^\n"']+)/m.exec(file.content)?.[1]?.trim();
-  if (!applyTo) {
-    return 0;
-  }
-  const fixedPrefix = applyTo.split(/[*!?{]/, 1)[0]?.replace(/\/$/, "") ?? "";
-  return fixedPrefix.split("/").filter(Boolean).length;
-};
-
-const scopeDepth = (file: InstructionFile): number => {
+const scopeDepth = (file: InstructionFile, targetPath: string): number => {
   if (file.adapter === "agents-md") {
     return file.scope === "." ? 0 : file.scope.split("/").length;
   }
-  return pathSpecificScopeDepth(file);
+  if (file.adapter === "copilot" && isCopilotPathInstruction(file.relativePath)) {
+    return copilotScopeDepth(file.content, targetPath);
+  }
+  return 0;
 };
 
 export const explainTarget = (report: ScanReport, target: string): readonly Applicability[] => {
@@ -52,10 +44,22 @@ export const explainTarget = (report: ScanReport, target: string): readonly Appl
   return report.files
     .flatMap((file) => {
       const adapter = adapters.find((candidate) => candidate.id === file.adapter);
-      if (!adapter || !adapter.appliesToTarget(file.relativePath, normalizedTarget)) {
+      if (!adapter || !adapter.appliesToTarget(file, normalizedTarget)) {
         return [];
       }
-      return [{ target: normalizedTarget, agent: file.adapter, instruction: file.relativePath, precedence: scopeDepth(file) }];
+      return [
+        {
+          target: normalizedTarget,
+          agent: file.adapter,
+          instruction: file.relativePath,
+          precedence: scopeDepth(file, normalizedTarget)
+        }
+      ];
     })
-    .sort((left, right) => right.precedence - left.precedence || left.agent.localeCompare(right.agent) || left.instruction.localeCompare(right.instruction));
+    .sort(
+      (left, right) =>
+        right.precedence - left.precedence ||
+        left.agent.localeCompare(right.agent) ||
+        left.instruction.localeCompare(right.instruction)
+    );
 };

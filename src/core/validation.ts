@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { isCopilotPathInstruction, parseCopilotApplyTo } from "../adapters/copilot.js";
 import type { Finding, InstructionFile } from "../types.js";
 
 const localMarkdownLinks = /\[[^\]]*\]\((?!https?:\/\/|mailto:|#)([^)\s]+)(?:\s+[^)]*)?\)/g;
@@ -38,6 +39,23 @@ const pushDuplicateFindings = (files: readonly InstructionFile[], findings: Find
       });
     }
   }
+};
+
+const pushCopilotApplyToFindings = (file: InstructionFile, findings: Finding[]): void => {
+  if (file.adapter !== "copilot" || !isCopilotPathInstruction(file.relativePath)) {
+    return;
+  }
+  const parsed = parseCopilotApplyTo(file.content);
+  if (parsed.ok) {
+    return;
+  }
+  findings.push({
+    code: "INVALID_COPILOT_APPLY_TO",
+    severity: "error",
+    message: "Path-specific Copilot instructions have invalid applyTo metadata.",
+    file: file.relativePath,
+    detail: parsed.error
+  });
 };
 
 const pushLinkFindings = async (root: string, file: InstructionFile, findings: Finding[]): Promise<void> => {
@@ -116,6 +134,7 @@ export const validateInstructions = async (root: string, files: readonly Instruc
   const findings: Finding[] = [];
   pushDuplicateFindings(files, findings);
   for (const file of files) {
+    pushCopilotApplyToFindings(file, findings);
     await pushLinkFindings(root, file, findings);
     await pushCommandFindings(root, file, findings);
   }

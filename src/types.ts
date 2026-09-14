@@ -6,7 +6,7 @@ export interface AgentAdapter {
   readonly id: AgentId;
   readonly label: string;
   matches(relativePath: string): boolean;
-  appliesToTarget(instructionPath: string, targetPath: string): boolean;
+  appliesToTarget(instruction: InstructionFile, targetPath: string): boolean;
 }
 
 export interface InstructionFile {
@@ -24,6 +24,7 @@ export interface Finding {
     | "DUPLICATE_INSTRUCTION"
     | "DEAD_LOCAL_LINK"
     | "MISSING_PACKAGE_SCRIPT"
+    | "INVALID_COPILOT_APPLY_TO"
     | "UNREADABLE_FILE"
     | "SYMLINKED_DIRECTORY"
     | "SYMLINKED_INSTRUCTION_FILE"

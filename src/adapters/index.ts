@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { AgentAdapter, AgentId } from "../types.js";
+import { copilotApplyToMatches, isCopilotPathInstruction } from "./copilot.js";
 
 const normalize = (value: string): string => value.split(path.sep).join("/").replace(/^\.\//, "");
 
@@ -16,15 +17,16 @@ const exactAdapter = (id: AgentId, label: string, pattern: RegExp): AgentAdapter
   id,
   label,
   matches: (relativePath) => pattern.test(normalize(relativePath)),
-  appliesToTarget: (instructionPath, targetPath) => isInside(normalize(targetPath), directoryScope(instructionPath))
+  appliesToTarget: (instruction, targetPath) =>
+    isInside(normalize(targetPath), directoryScope(instruction.relativePath))
 });
 
 const agentsMd: AgentAdapter = {
   id: "agents-md",
   label: "AGENTS.md",
   matches: (relativePath) => /(^|\/)AGENTS\.md$/i.test(normalize(relativePath)),
-  appliesToTarget: (instructionPath, targetPath) => {
-    const instructionDirectory = directoryScope(instructionPath);
+  appliesToTarget: (instruction, targetPath) => {
+    const instructionDirectory = directoryScope(instruction.relativePath);
     return isInside(normalize(targetPath), instructionDirectory);
   }
 };
@@ -34,16 +36,14 @@ const copilot: AgentAdapter = {
   label: "GitHub Copilot",
   matches: (relativePath) => {
     const normalized = normalize(relativePath);
-    return normalized === ".github/copilot-instructions.md" || /(^|\/)\.github\/instructions\/[^/]+\.instructions\.md$/i.test(normalized);
+    return normalized === ".github/copilot-instructions.md" || isCopilotPathInstruction(normalized);
   },
-  appliesToTarget: (instructionPath, targetPath) => {
-    const normalized = normalize(instructionPath);
+  appliesToTarget: (instruction, targetPath) => {
+    const normalized = normalize(instruction.relativePath);
     if (normalized === ".github/copilot-instructions.md") {
       return true;
     }
-    // Path globs live in YAML frontmatter. Until a full glob evaluator is configured,
-    // report these files as potentially applicable instead of making an unsafe claim.
-    return Boolean(targetPath);
+    return isCopilotPathInstruction(normalized) && copilotApplyToMatches(instruction.content, normalize(targetPath));
   }
 };
 

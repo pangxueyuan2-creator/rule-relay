@@ -41,6 +41,8 @@ rule-relay init      create a minimal AGENTS.md if missing
 
 `check` exits non-zero on errors. Add `--strict` to also fail on warnings.
 
+For GitHub Copilot path-specific `.instructions.md` files, `explain` evaluates the frontmatter `applyTo` value against the requested repository-relative path. Comma-separated patterns and the documented `*`, `**`, and `?` wildcards are supported. Missing or malformed `applyTo` metadata is an error in `check` instead of being treated as globally applicable.
+
 ## Status
 
 Early public version. Single maintainer.

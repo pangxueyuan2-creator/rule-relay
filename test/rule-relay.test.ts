@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { copilotApplyToMatches } from "../src/adapters/copilot.js";
 import { explainTarget, scanRepository } from "../src/core/scan.js";
 
 const fixture = path.resolve("test/fixtures/complex");
@@ -37,6 +38,65 @@ describe("RuleRelay", () => {
     expect(explanation[0]).toMatchObject({ instruction: "packages/api/AGENTS.md", agent: "agents-md" });
     expect(explanation.map((entry) => entry.instruction)).toContain("AGENTS.md");
     expect(explanation.map((entry) => entry.instruction)).toContain(".github/copilot-instructions.md");
+    expect(explanation.map((entry) => entry.instruction)).toContain(".github/instructions/api.instructions.md");
+  });
+
+  it("filters path-specific Copilot instructions using applyTo", async () => {
+    const report = await scanRepository(fixture);
+    const apiInstructions = explainTarget(report, "packages/api/src/server.ts").map((entry) => entry.instruction);
+    const webInstructions = explainTarget(report, "packages/web/src/page.ts").map((entry) => entry.instruction);
+
+    expect(apiInstructions).toContain(".github/instructions/api.instructions.md");
+    expect(webInstructions).not.toContain(".github/instructions/api.instructions.md");
+    expect(webInstructions).toContain(".github/copilot-instructions.md");
+  });
+
+  it("supports documented recursive and comma-separated Copilot globs", () => {
+    const content = `---\napplyTo: "**/*.ts,src/?.md,app/models/**/*.rb"\n---\n\nRules.\n`;
+
+    expect(copilotApplyToMatches(content, "index.ts")).toBe(true);
+    expect(copilotApplyToMatches(content, "src/core/index.ts")).toBe(true);
+    expect(copilotApplyToMatches(content, "src/a.md")).toBe(true);
+    expect(copilotApplyToMatches(content, "src/ab.md")).toBe(false);
+    expect(copilotApplyToMatches(content, "app/models/user.rb")).toBe(true);
+    expect(copilotApplyToMatches(content, "app/models/admin/user.rb")).toBe(true);
+    expect(copilotApplyToMatches(content, "app/controllers/user.rb")).toBe(false);
+  });
+
+  it("discovers nested Copilot instruction files and rejects missing applyTo metadata", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "rule-relay-copilot-"));
+    try {
+      const instructions = path.join(directory, ".github", "instructions");
+      const nested = path.join(instructions, "frontend");
+      await mkdir(nested, { recursive: true });
+      await writeFile(
+        path.join(nested, "react.instructions.md"),
+        `---\napplyTo: "src/**/*.tsx"\n---\n\nUse accessible components.\n`,
+        "utf8"
+      );
+      await writeFile(path.join(instructions, "missing.instructions.md"), `---\nowner: platform\n---\n\nRules.\n`, "utf8");
+
+      const report = await scanRepository(directory);
+      expect(report.files.map((file) => file.relativePath)).toEqual([
+        ".github/instructions/frontend/react.instructions.md",
+        ".github/instructions/missing.instructions.md"
+      ]);
+      expect(report.findings).toContainEqual(
+        expect.objectContaining({
+          code: "INVALID_COPILOT_APPLY_TO",
+          severity: "error",
+          file: ".github/instructions/missing.instructions.md"
+        })
+      );
+
+      const matching = explainTarget(report, "src/components/App.tsx").map((entry) => entry.instruction);
+      const nonMatching = explainTarget(report, "src/components/App.ts").map((entry) => entry.instruction);
+      expect(matching).toContain(".github/instructions/frontend/react.instructions.md");
+      expect(matching).not.toContain(".github/instructions/missing.instructions.md");
+      expect(nonMatching).not.toContain(".github/instructions/frontend/react.instructions.md");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("finds no issues in a clean fixture", async () => {
@@ -47,7 +107,9 @@ describe("RuleRelay", () => {
   });
 
   it("rejects a missing repository directory instead of reporting a green check", async () => {
-    await expect(scanRepository(path.join(os.tmpdir(), "rule-relay-missing-root"))).rejects.toThrow("Repository directory does not exist");
+    await expect(scanRepository(path.join(os.tmpdir(), "rule-relay-missing-root"))).rejects.toThrow(
+      "Repository directory does not exist"
+    );
   });
 
   it("keeps source fixtures readable for maintainers", async () => {
