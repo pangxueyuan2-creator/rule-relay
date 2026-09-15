@@ -23,6 +23,7 @@ export interface Finding {
   readonly code:
     | "DUPLICATE_INSTRUCTION"
     | "DEAD_LOCAL_LINK"
+    | "UNSAFE_LOCAL_LINK"
     | "MISSING_PACKAGE_SCRIPT"
     | "INVALID_COPILOT_APPLY_TO"
     | "UNREADABLE_FILE"
