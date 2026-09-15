@@ -58,6 +58,11 @@ const pushCopilotApplyToFindings = (file: InstructionFile, findings: Finding[]):
   });
 };
 
+const isInsideRepository = (root: string, candidate: string): boolean => {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+};
+
 const pushLinkFindings = async (root: string, file: InstructionFile, findings: Finding[]): Promise<void> => {
   for (const match of file.content.matchAll(localMarkdownLinks)) {
     const rawTarget = match[1];
@@ -69,6 +74,16 @@ const pushLinkFindings = async (root: string, file: InstructionFile, findings: F
       continue;
     }
     const resolved = path.resolve(path.dirname(file.absolutePath), target);
+    if (!isInsideRepository(root, resolved)) {
+      findings.push({
+        code: "UNSAFE_LOCAL_LINK",
+        severity: "error",
+        message: `Local Markdown link escapes the repository: ${rawTarget}`,
+        file: file.relativePath,
+        detail: "Only links that resolve inside the checked repository are inspected."
+      });
+      continue;
+    }
     try {
       await access(resolved);
     } catch {
