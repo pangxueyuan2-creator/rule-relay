@@ -41,6 +41,14 @@ rule-relay init      create a minimal AGENTS.md if missing
 
 `check` exits non-zero on errors. Add `--strict` to also fail on warnings.
 
+Local Markdown links must remain inside the checked repository after resolving
+filesystem symlinks and Windows junctions. An outside target is an error even when
+the link passes through a directory that instruction discovery ignores. Links
+whose actual targets remain inside are accepted; discovery's existing warnings
+for skipped symlinked instruction files or directories are unchanged. Missing or
+unresolvable targets remain errors. This check resolves filesystem metadata; it
+does not read linked file contents or provide a race-free filesystem sandbox.
+
 For GitHub Copilot path-specific `.instructions.md` files, `explain` evaluates the frontmatter `applyTo` value against the requested repository-relative path. Comma-separated patterns and the documented `*`, `**`, and `?` wildcards are supported. Missing or malformed `applyTo` metadata is an error in `check` instead of being treated as globally applicable.
 
 RuleRelay also recognizes `.github/copilot-instructions.md` in nested repository locations. A nested file is scoped to the directory that owns its `.github` folder, while the root `.github/copilot-instructions.md` remains repository-wide. `explain` reports applicable files without claiming a cross-agent precedence order.

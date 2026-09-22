@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { isCopilotPathInstruction, parseCopilotApplyTo } from "../adapters/copilot.js";
@@ -63,7 +63,12 @@ const isInsideRepository = (root: string, candidate: string): boolean => {
   return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
 };
 
-const pushLinkFindings = async (root: string, file: InstructionFile, findings: Finding[]): Promise<void> => {
+const pushLinkFindings = async (
+  root: string,
+  canonicalRoot: string,
+  file: InstructionFile,
+  findings: Finding[]
+): Promise<void> => {
   for (const match of file.content.matchAll(localMarkdownLinks)) {
     const rawTarget = match[1];
     if (!rawTarget || rawTarget.startsWith("#")) {
@@ -74,18 +79,24 @@ const pushLinkFindings = async (root: string, file: InstructionFile, findings: F
       continue;
     }
     const resolved = path.resolve(path.dirname(file.absolutePath), target);
+    const unsafeFinding: Finding = {
+      code: "UNSAFE_LOCAL_LINK",
+      severity: "error",
+      message: `Local Markdown link escapes the repository: ${rawTarget}`,
+      file: file.relativePath,
+      detail: "Only links whose resolved targets stay inside the checked repository are accepted."
+    };
     if (!isInsideRepository(root, resolved)) {
-      findings.push({
-        code: "UNSAFE_LOCAL_LINK",
-        severity: "error",
-        message: `Local Markdown link escapes the repository: ${rawTarget}`,
-        file: file.relativePath,
-        detail: "Only links that resolve inside the checked repository are inspected."
-      });
+      findings.push(unsafeFinding);
       continue;
     }
     try {
-      await access(resolved);
+      // Lexically contained paths can traverse symlinks or Windows junctions,
+      // including links in directories that instruction discovery ignores.
+      const canonicalTarget = await realpath(resolved);
+      if (!isInsideRepository(canonicalRoot, canonicalTarget)) {
+        findings.push(unsafeFinding);
+      }
     } catch {
       findings.push({
         code: "DEAD_LOCAL_LINK",
@@ -146,11 +157,12 @@ const pushCommandFindings = async (root: string, file: InstructionFile, findings
 };
 
 export const validateInstructions = async (root: string, files: readonly InstructionFile[]): Promise<readonly Finding[]> => {
+  const canonicalRoot = await realpath(root);
   const findings: Finding[] = [];
   pushDuplicateFindings(files, findings);
   for (const file of files) {
     pushCopilotApplyToFindings(file, findings);
-    await pushLinkFindings(root, file, findings);
+    await pushLinkFindings(root, canonicalRoot, file, findings);
     await pushCommandFindings(root, file, findings);
   }
   return findings;
